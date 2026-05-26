@@ -547,6 +547,12 @@ func GetUserModels(c *gin.Context) {
 		return
 	}
 	groups := service.GetUserUsableGroups(user.Group)
+	// 用户始终能使用自己分组的模型
+	if user.Group != "" {
+		if _, ok := groups[user.Group]; !ok {
+			groups[user.Group] = "我的分组"
+		}
+	}
 	var models []string
 	for group := range groups {
 		for _, g := range model.GetGroupEnabledModels(group) {
