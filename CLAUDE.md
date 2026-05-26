@@ -135,3 +135,43 @@ For request structs that are parsed from client JSON and then re-marshaled to up
 ### Rule 7: Billing Expression System — Read `pkg/billingexpr/expr.md`
 
 When working on tiered/dynamic billing (expression-based pricing), you MUST read `pkg/billingexpr/expr.md` first. It documents the design philosophy, expression language (variables, functions, examples), full system architecture (editor → storage → pre-consume → settlement → log display), token normalization rules (`p`/`c` auto-exclusion), quota conversion, and expression versioning. All code changes to the billing expression system must follow the patterns described in that document.
+
+## Deployment & Operations (api.tongapi.top)
+
+**服务器**: 43.103.50.34, SSH: `ssh -i ~/.ssh/tongapi_key root@43.103.50.34`
+
+### 构建铁律
+
+1. **dist 必须从源码编译** (`npm run build` / `rsbuild build`)，**禁止用 `dl_dist.py` 爬取**
+   - 爬取只拿 HTML 引用的文件，漏掉 JS 动态 `import()` 的 200+ async chunks → ChunkLoadError → 全站 GeneralError(500)
+2. **前端在 Windows 本地编译**（服务器 1.8GB 内存不够），tar + scp 上传
+3. **打补丁前先验证上游源码模式**：`grep -n '关键字符串' /tmp/src-rcXX/目标文件.go`
+
+### 容器操作铁律
+
+- **部署 = `docker cp binary → docker restart`**，不要重建容器
+- 测试临时容器用完立刻删：`docker rm -f tmp-xxx`
+- 更新 VERSION 需重建容器：先 `docker inspect` 拿完整启动参数
+
+### 数据库
+
+- SQLite: `_pragma=busy_timeout(30000)&_pragma=journal_mode(WAL)` (glebarez 驱动不认 `_busy_timeout=N`)
+- **下次碰服务器优先迁移到 MySQL**（容器 `newapi-mysql-1` 已在跑，只差数据导入 + 设 `SQL_DSN`）
+
+### 远程命令
+
+- **复杂命令写成脚本 scp 上去跑**，不要通过 PowerShell SSH 内联（引号转义地狱）
+- PowerShell 会吃掉 `$`、反引号、单引号内很多字符
+
+### proxy_lk888.py
+
+- 路径: `/www/wwwroot/lk888-proxy/proxy_lk888.py` (Docker bind mount)
+- 修改后 `docker restart lk888-proxy`
+- 坑: `r.items()` 必须写 `r.headers.items()`；超时设 30s；需要 `/` 根路由
+
+### 更新版本流程
+
+1. Windows: `git clone --depth 1 --branch vX.X.X git@github.com:Calcium-Ion/new-api.git` → `npm install` → `npm run build`
+2. tar + scp dist 到 `/tmp/dist-rcXX.tar.gz`
+3. 服务器 clone → 检查补丁模式 → 打 9 个补丁 → `go build`
+4. `docker cp /output/new-api newapi-new-api-1:/new-api` → `docker restart`
