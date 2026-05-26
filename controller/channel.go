@@ -1,4 +1,4 @@
-package controller
+﻿package controller
 
 import (
 	"context"
@@ -972,6 +972,22 @@ func UpdateChannel(c *gin.Context) {
 			}
 		case "replace":
 			// 覆盖模式：直接使用新密钥（默认行为，不需要特殊处理）
+		}
+	}
+
+	// 如果原始渠道有 balance_currency 设置，但本次更新未提供，则保留原始值
+	if originChannel.Setting != nil && *originChannel.Setting != "" {
+		var origSetting dto.ChannelSettings
+		if err := common.Unmarshal([]byte(*originChannel.Setting), &origSetting); err == nil && origSetting.BalanceCurrency != "" {
+			if channel.Setting != nil && *channel.Setting != "" {
+				var newSetting dto.ChannelSettings
+				if err := common.Unmarshal([]byte(*channel.Setting), &newSetting); err == nil && newSetting.BalanceCurrency == "" {
+					newSetting.BalanceCurrency = origSetting.BalanceCurrency
+					if settingBytes, err := common.Marshal(newSetting); err == nil {
+						channel.Setting = common.GetPointer[string](string(settingBytes))
+					}
+				}
+			}
 		}
 	}
 	err = channel.Update()
