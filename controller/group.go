@@ -29,6 +29,12 @@ func GetUserGroups(c *gin.Context) {
 	userId := c.GetInt("id")
 	userGroup, _ = model.GetUserGroup(userId, false)
 	userUsableGroups := service.GetUserUsableGroups(userGroup)
+	// 用户始终能在创建密钥时选择自己的分组
+	if userGroup != "" {
+		if _, ok := userUsableGroups[userGroup]; !ok {
+			userUsableGroups[userGroup] = "我的分组"
+		}
+	}
 	for groupName, _ := range ratio_setting.GetGroupRatioCopy() {
 		// UserUsableGroups contains the groups that the user can use
 		if desc, ok := userUsableGroups[groupName]; ok {
