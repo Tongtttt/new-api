@@ -417,6 +417,11 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 		return 0, err
 	}
 	balance := subscription.HardLimitUSD - usage.TotalUsage/100
+	// 按渠道设置中的币种转换
+	setting := channel.GetSetting()
+	if setting.BalanceCurrency == "CNY" {
+		balance = decimal.NewFromFloat(balance).Div(decimal.NewFromFloat(operation_setting.Price)).InexactFloat64()
+	}
 	channel.UpdateBalance(balance)
 	return balance, nil
 }

@@ -7,6 +7,7 @@ type ChannelSettings struct {
 	PassThroughBodyEnabled bool   `json:"pass_through_body_enabled,omitempty"`
 	SystemPrompt           string `json:"system_prompt,omitempty"`
 	SystemPromptOverride   bool   `json:"system_prompt_override,omitempty"`
+	BalanceCurrency        string `json:"balance_currency,omitempty"` // 余额币种，空或"USD"视为美元，"CNY"则按汇率转美元
 }
 
 type VertexKeyType string
